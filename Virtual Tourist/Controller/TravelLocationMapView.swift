@@ -10,17 +10,35 @@ import UIKit
 import MapKit
 
 class TravelLocationMapView: UIViewController, MKMapViewDelegate {
-
+    @IBOutlet weak var navigationBar: UINavigationItem!
     @IBOutlet weak var mapView: MKMapView!
+    @IBOutlet weak var deleteButton: UIButton!
+    @IBOutlet weak var editButton: UIBarButtonItem!
     
     var selectedAnnotation: MKPointAnnotation?
     
+    var firstTimeButtonClick = true
+    
+    enum Mode {
+        case normal
+        case deletion
+    }
+    
+    var mMode: Mode = .normal
+
     override func viewDidLoad() {
         super.viewDidLoad()
+        navigationBar.title = "Virtual Tourist"
+        deleteButton.isHidden = true
+        setupMap()
+    }
+    
+    func setupMap() {
         mapView.delegate = self
         let mapPress = UILongPressGestureRecognizer(target: self, action: #selector(TravelLocationMapView.addAnnotation(_:)))
         mapPress.minimumPressDuration = 1.0
         mapView.addGestureRecognizer(mapPress)
+        
     }
     
     @objc func addAnnotation(_ recognizer: UIGestureRecognizer){
@@ -52,7 +70,20 @@ class TravelLocationMapView: UIViewController, MKMapViewDelegate {
     
     func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView) {
         self.selectedAnnotation = view.annotation as! MKPointAnnotation
-        performSegue(withIdentifier: "moveToPhotos", sender: self)
+
+        if view.isSelected {
+            switch mMode {
+            case .normal:
+                performSegue(withIdentifier: "moveToPhotos", sender: self)
+                self.mapView.deselectAnnotation(selectedAnnotation!, animated: true)
+                
+            case .deletion:
+                if let annotation = selectedAnnotation {
+                    self.mapView.removeAnnotation(annotation)
+                    self.mapView.deselectAnnotation(annotation, animated: true)
+                }
+            }
+        }
     }
     
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
@@ -64,5 +95,18 @@ class TravelLocationMapView: UIViewController, MKMapViewDelegate {
         }
     }
     
+    @IBAction func onEditClick(_ sender: Any) {
+        if firstTimeButtonClick {
+            editButton.title = "Done"
+            firstTimeButtonClick = false
+            deleteButton.isHidden = false
+            mMode = .deletion
+        } else {
+            editButton.title = "Edit"
+            deleteButton.isHidden = true
+            firstTimeButtonClick = true
+            mMode = .normal
+        }
+    }
 }
 

@@ -17,7 +17,7 @@ class FlickrAPI {
         static var secret = ""
     }
     
-    let APIKEY = "59489c25333eccab5c1b25e522870585"
+    let APIKEY = "500c368880955025e5f575388499f06a"
     
     enum Endpoints {
         static let base = "https://www.flickr.com/photos/search/"
@@ -36,9 +36,10 @@ class FlickrAPI {
         }
     }
     
-    class func getPhotosJSON(completion: @escaping (Bool, Error?, FlickrResponse?) -> Void) {
+    class func getPhotosJSON(completion: @escaping (Bool, Error?, FlickrResponse?) -> Void, lat: Double, long: Double, radius: Int) {
         var photo: FlickrResponse!
-        let newURL = "https://www.flickr.com/services/rest/?method=flickr.photos.search&api_key=883b1191a5a6afa5b15c49fdccf1cedc&user_id=cats&format=json&nojsoncallback=1"
+        let newURL = "https://www.flickr.com/services/rest/?method=flickr.photos.search&api_key=500c368880955025e5f575388499f06a&lat=\(lat)&lon=\(long)&radius=\(radius)&per_page=21&format=json&nojsoncallback=1"
+        print(newURL)
         let request = URLRequest(url: URL(string: newURL)!)
         let session = URLSession.shared
         let task = session.dataTask(with: request) { data, response, error in

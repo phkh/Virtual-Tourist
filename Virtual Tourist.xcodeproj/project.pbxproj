@@ -18,6 +18,7 @@
 		D413AD4223B32A7C00C7C22A /* FlickrAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = D413AD4123B32A7C00C7C22A /* FlickrAPI.swift */; };
 		D413AD4623B3374300C7C22A /* FlickrResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = D413AD4523B3374300C7C22A /* FlickrResponse.swift */; };
 		D413AD4823B36E4600C7C22A /* CollectionViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = D413AD4723B36E4600C7C22A /* CollectionViewCell.swift */; };
+		D430466023B4876500B91185 /* UIImage+Resize.swift in Sources */ = {isa = PBXBuildFile; fileRef = D430465F23B4876500B91185 /* UIImage+Resize.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -34,6 +35,7 @@
 		D413AD4123B32A7C00C7C22A /* FlickrAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlickrAPI.swift; sourceTree = "<group>"; };
 		D413AD4523B3374300C7C22A /* FlickrResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlickrResponse.swift; sourceTree = "<group>"; };
 		D413AD4723B36E4600C7C22A /* CollectionViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionViewCell.swift; sourceTree = "<group>"; };
+		D430465F23B4876500B91185 /* UIImage+Resize.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIImage+Resize.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -90,6 +92,7 @@
 			isa = PBXGroup;
 			children = (
 				D413AD4723B36E4600C7C22A /* CollectionViewCell.swift */,
+				D430465F23B4876500B91185 /* UIImage+Resize.swift */,
 			);
 			path = View;
 			sourceTree = "<group>";
@@ -206,6 +209,7 @@
 				D413AD4823B36E4600C7C22A /* CollectionViewCell.swift in Sources */,
 				D413AD2423B31D7C00C7C22A /* AppDelegate.swift in Sources */,
 				D413AD4223B32A7C00C7C22A /* FlickrAPI.swift in Sources */,
+				D430466023B4876500B91185 /* UIImage+Resize.swift in Sources */,
 				D413AD3F23B3258600C7C22A /* PhotoAlbumViewController.swift in Sources */,
 				D413AD2623B31D7C00C7C22A /* SceneDelegate.swift in Sources */,
 				D413AD4623B3374300C7C22A /* FlickrResponse.swift in Sources */,
