@@ -9,16 +9,22 @@
 import Foundation
 import UIKit
 import MapKit
+import CoreData
 
-class PhotoAlbumViewController: UIViewController, UICollectionViewDelegate, UICollectionViewDataSource {
+class PhotoAlbumViewController: UIViewController, NSFetchedResultsControllerDelegate {
     
+    @IBOutlet weak var flowLayout: UICollectionViewFlowLayout!
     @IBOutlet weak var map: MKMapView!
     @IBOutlet weak var collectionView: UICollectionView!
     @IBOutlet weak var newCollectionButton: UIButton!
     @IBOutlet weak var noImagesLabel: UILabel!
     
     var placeholerImages: [UIImage] = []
-    var images: [UIImage] = []
+    var photos: [Photo] = []
+    
+    var selectedPin: Pin!
+    
+    var imagesURL = [String]()
     
     var latitude: Double = 0.0
     var longitude: Double = 0.0
@@ -26,9 +32,11 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDelegate, UICo
     
     let annotation = MKPointAnnotation()
     var itemsSelected = [IndexPath]()
-    
+        
     var loaded = false
     var changeButtonLabel = false
+    
+    var dataController: DataController!
     
     enum Mode {
         case view
@@ -48,72 +56,199 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDelegate, UICo
         }
     }
     
-    override func viewDidLoad() {
-        super.viewDidLoad()
+    func configureUI() {
         collectionView.delegate = self
         collectionView.dataSource = self
         noImagesLabel.isHidden = true
         collectionView.allowsMultipleSelection = true
+        collectionView.isHidden = false
+        collectionView.isUserInteractionEnabled = true
         
         mMode = .view
+        
+        annotation.coordinate = CLLocationCoordinate2D(latitude: selectedPin.latitude, longitude: selectedPin.longitude)
+        
+        map.addAnnotation(annotation)
+        map.showAnnotations(self.map.annotations, animated: true)
     }
     
-    override func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
-        if latitude != 0.0 && longitude != 0.0 {
-            FlickrAPI.getPhotosJSON(completion: completion(success:error:response:), lat: latitude, long: longitude, radius: 5)
-            annotation.coordinate = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
-            map.addAnnotation(annotation)
-            map.showAnnotations(self.map.annotations, animated: true)
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        configureUI()
+        
+        guard let loadedPhotos = loadSavedPhotos() else {
+            return
         }
+        
+        if loadedPhotos.count > 0 {
+            noImagesLabel.isHidden = true
+            loaded = true
+            photos = loadedPhotos
+        } else {
+            requestFlickrPhotos()
+        }
+
+    }
+    
+    func requestFlickrPhotos() {
+        FlickrAPI.getPhotosJSON(completion: completion(success:error:response:), lat: selectedPin.latitude, long: selectedPin.longitude, radius: 5)
     }
     
     func completion(success: Bool, error: Error?, response: FlickrResponse?) {
+        DispatchQueue.main.async {
+            self.collectionView.isUserInteractionEnabled = false
+        }
+        removeFromCoreData(photos: photos)
+        photos.removeAll()
+        imagesURL.removeAll()
         if success {
-            downloadPhotos(response: response)
+            var url = ""
+            DispatchQueue.main.async {
+                self.collectionView.reloadData()
+            }
+            if let photos = response?.photos.photo {
+                for element in photos {
+                    url = "https://farm\(element.farm).staticflickr.com/\(element.server)/\(element.id)_\(element.secret)_q.jpg"
+                    self.imagesURL.append(url)
+                    print(url)
+                }
+            }
+            
+            if imagesURL.count > 0 {
+                addToCoreData(at: self.selectedPin, of: imagesURL.shuffled())
+                self.photos = loadSavedPhotos()!
+                DispatchQueue.main.async {
+                    self.collectionView.reloadData()
+                    self.noImagesLabel.isHidden = true
+                    self.newCollectionButton.isEnabled = true
+                    self.collectionView.isUserInteractionEnabled = true
+                }
+                loaded = true
+            } else {
+                loaded = false
+                DispatchQueue.main.async {
+                    self.noImagesLabel.isHidden = false
+                    self.collectionView.isHidden = true
+                    self.newCollectionButton.isEnabled = false
+                }
+            }
+            
         } else {
+
+        }
+    }
+    
+    func setImage(from url: String) -> Data? {
+        guard let imageURL = URL(string: url) else { return nil }
+        guard let imageData = try? Data(contentsOf: imageURL) else { return nil }
+
+        if let image = UIImage(data: imageData) {
+            let newImage = UIImage.resize(image: image, targetSize: CGSize(width: 39, height: 39))
+            return newImage.jpegData(compressionQuality: 1.0)
+        } else {
+            return nil
+        }
+    }
+    
+    func addToCoreData(at pin: Pin?, of urls: [String]) {
+        
+        for index in 0..<urls.count {
+            let photo = Photo(context: dataController.viewContext)
+            photo.pin = pin
+            photo.image = setImage(from: urls[index])
+            photos.append(photo)
+
+            do {
+                try dataController.viewContext.save()
+            } catch {
+                fatalError("oops something went wrong")
+            }
             
         }
     }
     
-    func downloadPhotos(response: FlickrResponse?) {
-        var url = ""
-        let download = DispatchQueue(label: "download")
-        DispatchQueue.main.async {
-            self.collectionView.isScrollEnabled = false
-        }
-        if let photos = response?.photos.photo {
-            for element in photos {
-                url = "https://farm\(element.farm).staticflickr.com/\(element.server)/\(element.id)_\(element.secret)_q.jpg"
-                print(url)
-                self.setImage(from: url)
-            }
+    func removeFromCoreData(photos: [Photo]) {
+        for photo in photos {
+            dataController.viewContext.delete(photo)
         }
         
-        DispatchQueue.main.async {
-            if self.images.count == 0 {
-                self.noImagesLabel.isHidden = false
-        }
-            self.collectionView.reloadData()
-            self.collectionView.isScrollEnabled = true
-            self.newCollectionButton.isEnabled = true
-        }
-        loaded = true
-
     }
     
-    func setImage(from url: String) {
-        guard let imageURL = URL(string: url) else { return }
-        guard let imageData = try? Data(contentsOf: imageURL) else { return }
+    func getIndexes() -> [Int] {
+        var indexes:[Int] = []
+        let indexPaths = collectionView.indexPathsForSelectedItems!
 
-        let image = UIImage(data: imageData)!
-        let newImage = UIImage.resize(image: image, targetSize: CGSize(width: 118, height: 118))
-        images.append(newImage)
+        for indexPath in indexPaths {
+            indexes.append(indexPath.row)
+        }
+        return indexes
     }
+    
+    func loadNewCollection() {
+        if radius != 32 {
+            radius += 3
+        }
+        loaded = false
+        FlickrAPI.getPhotosJSON(completion: completion(success:error:response:), lat: selectedPin.latitude, long: selectedPin.longitude, radius: radius)
+        collectionView.reloadData()
+    }
+    
+    func loadSavedPhotos() -> [Photo]? {
+        do {
+            var photos: [Photo] = []
+            let fetchedResultsController = self.fetchedResultsController()
+            try fetchedResultsController.performFetch()
+            
+            let photosCount = try fetchedResultsController.managedObjectContext.count(for: fetchedResultsController.fetchRequest)
+            for index in 0..<photosCount {
+                photos.append(fetchedResultsController.object(at: IndexPath(row: index, section: 0)) as! Photo)
+            }
+            return photos
+        } catch {
+            return nil
+        }
+    }
+    
+    func fetchedResultsController() -> NSFetchedResultsController<NSFetchRequestResult> {
+        
+        let fetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: "Photo")
+        fetchRequest.sortDescriptors = []
+        fetchRequest.predicate = NSPredicate(format: "pin = %@", argumentArray: [selectedPin!])
+        let fetchResultController = NSFetchedResultsController(fetchRequest: fetchRequest, managedObjectContext: dataController.viewContext, sectionNameKeyPath: nil, cacheName: nil)
+        fetchResultController.delegate = self
+        return fetchResultController
+    }
+    
+    
+    @IBAction func onButtonClick(_ sender: Any) {
+        switch mMode {
+        case .select:
+            if let selectedCells = collectionView.indexPathsForSelectedItems {
+                let items = selectedCells.map { $0.item }.sorted().reversed()
+
+                for item in items {
+                    dataController.viewContext.delete(photos[item])
+                    photos.remove(at: item)
+                }
+                collectionView.deleteItems(at: selectedCells)
+                try? dataController.viewContext.save()
+
+            }
+            mMode = .view
+        case .view:
+            removeFromCoreData(photos: photos)
+            loadNewCollection()
+            newCollectionButton.isEnabled = false   
+        }
+    }
+}
+
+extension PhotoAlbumViewController: UICollectionViewDataSource, UICollectionViewDelegate {
     
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
         if loaded {
-            return images.count
+            return photos.count
         } else {
             return 21
         }
@@ -124,7 +259,8 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDelegate, UICo
         
         if loaded {
             cellCollection.activityIndicator.stopAnimating()
-            cellCollection.imageCell.image = images[indexPath.row]
+            let photo = photos[indexPath.row]
+            cellCollection.imageCell.image = UIImage(data: photo.image!)
         } else {
             cellCollection.imageCell.image = UIImage(named: "placeholder")
             cellCollection.activityIndicator.startAnimating()
@@ -155,38 +291,8 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDelegate, UICo
                 itemsSelected.remove(at: itemsSelected.firstIndex(of: indexPath)!)
             }
         }
-        
-
         if let selectedItems = collectionView.indexPathsForSelectedItems, selectedItems.count == 0 {
             mMode = .view
         }
-    }
-    
-    @IBAction func onButtonClick(_ sender: Any) {
-        switch mMode {
-        case .select:
-            if let selectedCells = collectionView.indexPathsForSelectedItems {
-                let items = selectedCells.map { $0.item }.sorted().reversed()
-
-                for item in items {
-                    images.remove(at: item)
-                }
-                collectionView.deleteItems(at: selectedCells)
-
-            }
-            mMode = .view
-        case .view:
-            loadNewCollection()
-        }
-    }
-    
-    func loadNewCollection() {
-        if radius != 32 {
-            radius += 3
-        }
-        images.removeAll()
-        loaded = false
-        FlickrAPI.getPhotosJSON(completion: completion(success:error:response:), lat: latitude, long: longitude, radius: radius)
-        collectionView.reloadData()
     }
 }

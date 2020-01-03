@@ -10,6 +10,8 @@ import Foundation
 
 class FlickrAPI {
     
+    var session = URLSession.shared
+    
     struct Info {
         static var farm = 0
         static var serverID = 0
@@ -17,7 +19,7 @@ class FlickrAPI {
         static var secret = ""
     }
     
-    let APIKEY = "500c368880955025e5f575388499f06a"
+    let APIKEY = "59489c25333eccab5c1b25e522870585"
     
     enum Endpoints {
         static let base = "https://www.flickr.com/photos/search/"
@@ -38,7 +40,7 @@ class FlickrAPI {
     
     class func getPhotosJSON(completion: @escaping (Bool, Error?, FlickrResponse?) -> Void, lat: Double, long: Double, radius: Int) {
         var photo: FlickrResponse!
-        let newURL = "https://www.flickr.com/services/rest/?method=flickr.photos.search&api_key=500c368880955025e5f575388499f06a&lat=\(lat)&lon=\(long)&radius=\(radius)&per_page=21&format=json&nojsoncallback=1"
+        let newURL = "https://www.flickr.com/services/rest/?method=flickr.photos.search&api_key=59489c25333eccab5c1b25e522870585&lat=\(lat)&lon=\(long)&radius=\(radius)&per_page=21&format=json&nojsoncallback=1"
         print(newURL)
         let request = URLRequest(url: URL(string: newURL)!)
         let session = URLSession.shared
@@ -60,5 +62,9 @@ class FlickrAPI {
         task.resume()
     }
     
+//    class func downloadImageFromUrl(imageURL: String, completion: @escaping (data: Data, error: Error) -> Void) {
+//        let imageURL = URL(string: <#T##String#>)
+//    }
+//    
     
 }

@@ -100,21 +100,21 @@
                                 </collectionViewFlowLayout>
                                 <cells>
                                     <collectionViewCell opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" reuseIdentifier="cell" id="Z1k-Nj-00n" customClass="CollectionViewCell" customModule="Virtual_Tourist" customModuleProvider="target">
-                                        <rect key="frame" x="0.0" y="0.0" width="100" height="100"/>
+                                        <rect key="frame" x="0.0" y="0.0" width="135" height="135"/>
                                         <autoresizingMask key="autoresizingMask" flexibleMinX="YES" flexibleMaxX="YES" flexibleMinY="YES" flexibleMaxY="YES"/>
                                         <collectionViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" insetsLayoutMarginsFromSafeArea="NO" id="nig-eD-mCA">
-                                            <rect key="frame" x="0.0" y="0.0" width="100" height="100"/>
+                                            <rect key="frame" x="0.0" y="0.0" width="135" height="135"/>
                                             <autoresizingMask key="autoresizingMask"/>
                                             <subviews>
                                                 <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="kQb-sD-au1">
-                                                    <rect key="frame" x="0.0" y="0.0" width="100" height="100"/>
+                                                    <rect key="frame" x="0.0" y="0.0" width="135" height="135"/>
                                                 </imageView>
                                                 <view hidden="YES" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="1DB-CM-NMi">
-                                                    <rect key="frame" x="0.0" y="0.0" width="100" height="100"/>
+                                                    <rect key="frame" x="0.0" y="0.0" width="135" height="135"/>
                                                     <color key="backgroundColor" white="1" alpha="0.5" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                                                 </view>
                                                 <activityIndicatorView hidden="YES" opaque="NO" contentMode="scaleToFill" horizontalHuggingPriority="750" verticalHuggingPriority="750" hidesWhenStopped="YES" style="large" translatesAutoresizingMaskIntoConstraints="NO" id="r7K-YF-39g">
-                                                    <rect key="frame" x="31.5" y="31.5" width="37" height="37"/>
+                                                    <rect key="frame" x="49" y="49" width="37" height="37"/>
                                                     <color key="color" systemColor="linkColor" red="0.0" green="0.47843137250000001" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                                                 </activityIndicatorView>
                                             </subviews>
@@ -131,7 +131,8 @@
                                                 <constraint firstItem="kQb-sD-au1" firstAttribute="leading" secondItem="nig-eD-mCA" secondAttribute="leading" id="te6-gm-zWK"/>
                                             </constraints>
                                         </collectionViewCellContentView>
-                                        <size key="customSize" width="100" height="100"/>
+                                        <viewLayoutGuide key="safeArea" id="VOH-Of-521"/>
+                                        <size key="customSize" width="135" height="135"/>
                                         <connections>
                                             <outlet property="activityIndicator" destination="r7K-YF-39g" id="Zhb-xd-cpj"/>
                                             <outlet property="highlightingView" destination="1DB-CM-NMi" id="jwb-ba-tGu"/>
@@ -181,6 +182,7 @@
                     <navigationItem key="navigationItem" id="FTa-2w-4W5"/>
                     <connections>
                         <outlet property="collectionView" destination="a6Q-es-8KH" id="RmQ-vy-JWQ"/>
+                        <outlet property="flowLayout" destination="6av-Ek-Jax" id="WXj-ty-QzW"/>
                         <outlet property="map" destination="NcR-nv-a0L" id="hg5-5h-NSC"/>
                         <outlet property="newCollectionButton" destination="h6F-sO-Ob3" id="75Y-Vj-xyt"/>
                         <outlet property="noImagesLabel" destination="Tpl-GZ-Wk4" id="UIx-Lu-qjG"/>

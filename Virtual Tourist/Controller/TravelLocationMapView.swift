@@ -8,6 +8,7 @@
 
 import UIKit
 import MapKit
+import CoreData
 
 class TravelLocationMapView: UIViewController, MKMapViewDelegate {
     @IBOutlet weak var navigationBar: UINavigationItem!
@@ -15,22 +16,43 @@ class TravelLocationMapView: UIViewController, MKMapViewDelegate {
     @IBOutlet weak var deleteButton: UIButton!
     @IBOutlet weak var editButton: UIBarButtonItem!
     
-    var selectedAnnotation: MKPointAnnotation?
-    
     var firstTimeButtonClick = true
     
-    enum Mode {
-        case normal
-        case deletion
-    }
+    var dataController:DataController!
     
-    var mMode: Mode = .normal
+    var pins: [Pin] = []
+    var selectedAnnotation: MKPointAnnotation!
+    var fetchedResults: NSFetchedResultsController<Pin>!
 
+    
+    enum Mode {
+         case normal
+         case deletion
+     }
+    var mMode: Mode = .normal
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         navigationBar.title = "Virtual Tourist"
         deleteButton.isHidden = true
         setupMap()
+        
+        var appDelegate = UIApplication.shared.delegate as! AppDelegate
+        dataController = appDelegate.dataController
+        
+        setupFetchedResults()
+        
+        for pin in fetchedResults.fetchedObjects ?? [] {
+            let annotation = MKPointAnnotation()
+            annotation.coordinate = CLLocationCoordinate2D(latitude: pin.latitude, longitude: pin.longitude)
+            pins.append(pin)
+            mapView.addAnnotation(annotation)
+        }
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        setupFetchedResults()
     }
     
     func setupMap() {
@@ -46,10 +68,18 @@ class TravelLocationMapView: UIViewController, MKMapViewDelegate {
             let annotations = self.mapView.annotations
             let touchedAt = recognizer.location(in: self.mapView)
             let newCoordinates : CLLocationCoordinate2D = mapView.convert(touchedAt, toCoordinateFrom: self.mapView)
+            
+            let pin = Pin(context: dataController.viewContext)
+            pin.latitude = newCoordinates.latitude
+            pin.longitude = newCoordinates.longitude
+            pin.coordinateString = "&lat=\(pin.latitude)&lon=\(pin.longitude)"
 
             let annotation = MKPointAnnotation()
             annotation.coordinate = newCoordinates
             self.mapView.addAnnotation(annotation)
+            
+            try? dataController.viewContext.save()
+            pins.append(pin)
         }
     }
     
@@ -69,8 +99,7 @@ class TravelLocationMapView: UIViewController, MKMapViewDelegate {
     
     
     func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView) {
-        self.selectedAnnotation = view.annotation as! MKPointAnnotation
-
+        selectedAnnotation = view.annotation as? MKPointAnnotation
         if view.isSelected {
             switch mMode {
             case .normal:
@@ -78,9 +107,23 @@ class TravelLocationMapView: UIViewController, MKMapViewDelegate {
                 self.mapView.deselectAnnotation(selectedAnnotation!, animated: true)
                 
             case .deletion:
+                
                 if let annotation = selectedAnnotation {
+                    
+                    for pin in pins {
+                        if pin.latitude == (annotation.coordinate.latitude) && pin.longitude == (annotation.coordinate.longitude) {
+                            
+                            let annotationToRemove = view.annotation
+                            self.mapView.removeAnnotation(annotationToRemove!)
+                            dataController.viewContext.delete(pin)
+                            try? dataController.viewContext.save()
+                            
+                            break
+                        }
+                    }
                     self.mapView.removeAnnotation(annotation)
                     self.mapView.deselectAnnotation(annotation, animated: true)
+                    
                 }
             }
         }
@@ -89,8 +132,19 @@ class TravelLocationMapView: UIViewController, MKMapViewDelegate {
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         if segue.identifier == "moveToPhotos" {
             if let viewController = segue.destination as? PhotoAlbumViewController {
-                viewController.latitude = (self.selectedAnnotation?.coordinate.latitude)!
-                viewController.longitude = (self.selectedAnnotation?.coordinate.longitude)!
+                var touchedPin: Pin?
+                
+                for pin in pins {
+                    let latitudeMatch = selectedAnnotation!.coordinate.latitude == pin.latitude
+                    let longitudeMatch = selectedAnnotation!.coordinate.longitude == pin.longitude
+
+                    if latitudeMatch && longitudeMatch {
+                        touchedPin = pin
+                        break
+                    }
+                }
+                viewController.selectedPin = touchedPin
+                viewController.dataController = dataController
             }
         }
     }
@@ -110,3 +164,20 @@ class TravelLocationMapView: UIViewController, MKMapViewDelegate {
     }
 }
 
+
+extension TravelLocationMapView: NSFetchedResultsControllerDelegate {
+    func setupFetchedResults() {
+        let fetchRequest: NSFetchRequest<Pin> = Pin.fetchRequest()
+        let sortDescriptor = NSSortDescriptor(key: "coordinateString", ascending: false)
+        fetchRequest.sortDescriptors = [sortDescriptor]
+        
+        fetchedResults = NSFetchedResultsController(fetchRequest: fetchRequest, managedObjectContext: dataController.viewContext, sectionNameKeyPath: nil, cacheName: nil)
+        fetchedResults.delegate = self
+        do {
+            try fetchedResults.performFetch()
+        } catch {
+            fatalError("Error: \(error.localizedDescription)")
+        }
+    }
+
+}
