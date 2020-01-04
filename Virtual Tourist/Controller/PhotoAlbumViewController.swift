@@ -29,6 +29,8 @@ class PhotoAlbumViewController: UIViewController, NSFetchedResultsControllerDele
     var latitude: Double = 0.0
     var longitude: Double = 0.0
     var radius: Int = 5
+    var totalPages: Int? = 0
+    var perPage: Int = 0
     
     let annotation = MKPointAnnotation()
     var itemsSelected = [IndexPath]()
@@ -92,7 +94,7 @@ class PhotoAlbumViewController: UIViewController, NSFetchedResultsControllerDele
     }
     
     func requestFlickrPhotos() {
-        FlickrAPI.getPhotosJSON(completion: completion(success:error:response:), lat: selectedPin.latitude, long: selectedPin.longitude, radius: 5)
+        FlickrAPI.getPhotosJSON(completion: completion(success:error:response:), lat: selectedPin.latitude, long: selectedPin.longitude, radius: 5, page: 2)
     }
     
     func completion(success: Bool, error: Error?, response: FlickrResponse?) {
@@ -103,6 +105,13 @@ class PhotoAlbumViewController: UIViewController, NSFetchedResultsControllerDele
         photos.removeAll()
         imagesURL.removeAll()
         if success {
+            if let pages = response?.photos.pages {
+                totalPages = pages
+            }
+            if let perPage = response?.photos.perpage {
+                self.perPage = perPage
+            }
+            
             var url = ""
             DispatchQueue.main.async {
                 self.collectionView.reloadData()
@@ -116,7 +125,7 @@ class PhotoAlbumViewController: UIViewController, NSFetchedResultsControllerDele
             }
             
             if imagesURL.count > 0 {
-                addToCoreData(at: self.selectedPin, of: imagesURL.shuffled())
+                addToCoreData(at: self.selectedPin, of: imagesURL)
                 self.photos = loadSavedPhotos()!
                 DispatchQueue.main.async {
                     self.collectionView.reloadData()
@@ -189,8 +198,15 @@ class PhotoAlbumViewController: UIViewController, NSFetchedResultsControllerDele
         if radius != 32 {
             radius += 3
         }
+        var page: Int {
+           if let totalPages = totalPages {
+               let page = min(totalPages, 4000/21)
+               return Int(arc4random_uniform(UInt32(page)) + 1)
+           }
+           return 1
+       }
         loaded = false
-        FlickrAPI.getPhotosJSON(completion: completion(success:error:response:), lat: selectedPin.latitude, long: selectedPin.longitude, radius: radius)
+        FlickrAPI.getPhotosJSON(completion: completion(success:error:response:), lat: selectedPin.latitude, long: selectedPin.longitude, radius: radius, page: page)
         collectionView.reloadData()
     }
     

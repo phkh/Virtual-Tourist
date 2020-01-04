@@ -78,6 +78,7 @@ class TravelLocationMapView: UIViewController, MKMapViewDelegate {
             annotation.coordinate = newCoordinates
             self.mapView.addAnnotation(annotation)
             
+            
             try? dataController.viewContext.save()
             pins.append(pin)
         }

@@ -38,9 +38,9 @@ class FlickrAPI {
         }
     }
     
-    class func getPhotosJSON(completion: @escaping (Bool, Error?, FlickrResponse?) -> Void, lat: Double, long: Double, radius: Int) {
+    class func getPhotosJSON(completion: @escaping (Bool, Error?, FlickrResponse?) -> Void, lat: Double, long: Double, radius: Int, page: Int) {
         var photo: FlickrResponse!
-        let newURL = "https://www.flickr.com/services/rest/?method=flickr.photos.search&api_key=59489c25333eccab5c1b25e522870585&lat=\(lat)&lon=\(long)&radius=\(radius)&per_page=21&format=json&nojsoncallback=1"
+        let newURL = "https://www.flickr.com/services/rest/?method=flickr.photos.search&api_key=59489c25333eccab5c1b25e522870585&lat=\(lat)&lon=\(long)&radius=\(radius)&per_page=21&page=\(page)&format=json&nojsoncallback=1"
         print(newURL)
         let request = URLRequest(url: URL(string: newURL)!)
         let session = URLSession.shared
