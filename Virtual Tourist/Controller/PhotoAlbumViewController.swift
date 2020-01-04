@@ -28,18 +28,16 @@ class PhotoAlbumViewController: UIViewController, NSFetchedResultsControllerDele
     
     var latitude: Double = 0.0
     var longitude: Double = 0.0
-    var radius: Int = 5
+
     var totalPages: Int? = 0
     var perPage: Int = 0
     
-    let annotation = MKPointAnnotation()
+    let annotationOnMap = MKPointAnnotation()
+    
     var itemsSelected = [IndexPath]()
-        
+    
     var loaded = false
-    var changeButtonLabel = false
-    
-    var dataController: DataController!
-    
+        
     enum Mode {
         case view
         case select
@@ -61,16 +59,16 @@ class PhotoAlbumViewController: UIViewController, NSFetchedResultsControllerDele
     func configureUI() {
         collectionView.delegate = self
         collectionView.dataSource = self
-        noImagesLabel.isHidden = true
         collectionView.allowsMultipleSelection = true
         collectionView.isHidden = false
         collectionView.isUserInteractionEnabled = true
         
+        noImagesLabel.isHidden = true
+        
         mMode = .view
         
-        annotation.coordinate = CLLocationCoordinate2D(latitude: selectedPin.latitude, longitude: selectedPin.longitude)
-        
-        map.addAnnotation(annotation)
+        annotationOnMap.coordinate = CLLocationCoordinate2D(latitude: selectedPin.latitude, longitude: selectedPin.longitude)
+        map.addAnnotation(annotationOnMap)
         map.showAnnotations(self.map.annotations, animated: true)
     }
     
@@ -94,13 +92,14 @@ class PhotoAlbumViewController: UIViewController, NSFetchedResultsControllerDele
     }
     
     func requestFlickrPhotos() {
-        FlickrAPI.getPhotosJSON(completion: completion(success:error:response:), lat: selectedPin.latitude, long: selectedPin.longitude, radius: 5, page: 2)
+        FlickrAPI.getPhotosJSON(completion: completion(success:error:response:), lat: selectedPin.latitude, long: selectedPin.longitude, page: 1)
     }
     
     func completion(success: Bool, error: Error?, response: FlickrResponse?) {
         DispatchQueue.main.async {
             self.collectionView.isUserInteractionEnabled = false
         }
+        
         removeFromCoreData(photos: photos)
         photos.removeAll()
         imagesURL.removeAll()
@@ -117,10 +116,10 @@ class PhotoAlbumViewController: UIViewController, NSFetchedResultsControllerDele
                 self.collectionView.reloadData()
             }
             if let photos = response?.photos.photo {
-                for element in photos {
-                    url = "https://farm\(element.farm).staticflickr.com/\(element.server)/\(element.id)_\(element.secret)_q.jpg"
-                    self.imagesURL.append(url)
-                    print(url)
+                for photo in photos {
+                    url = "https://farm\(photo.farm).staticflickr.com/\(photo.server)/\(photo.id)_\(photo.secret)_q.jpg"
+                    imagesURL.append(url)
+                    //print(url)
                 }
             }
             
@@ -142,9 +141,12 @@ class PhotoAlbumViewController: UIViewController, NSFetchedResultsControllerDele
                     self.newCollectionButton.isEnabled = false
                 }
             }
-            
         } else {
-
+            guard Utils.connectedToNetwork() == true else {
+                Utils.showAlert(title: "Error", message: "No Internet Connection", view: self)
+                return
+            }
+            Utils.showAlert(title: "Error", message: "Something went wrong", view: self)
         }
     }
     
@@ -161,27 +163,24 @@ class PhotoAlbumViewController: UIViewController, NSFetchedResultsControllerDele
     }
     
     func addToCoreData(at pin: Pin?, of urls: [String]) {
-        
         for index in 0..<urls.count {
-            let photo = Photo(context: dataController.viewContext)
+            let photo = Photo(context: DataController.shared.viewContext)
             photo.pin = pin
             photo.image = setImage(from: urls[index])
             photos.append(photo)
 
             do {
-                try dataController.viewContext.save()
+                try DataController.shared.viewContext.save()
             } catch {
-                fatalError("oops something went wrong")
+                Utils.showAlert(title: "Error", message: "Something went wrong", view: self)
             }
-            
         }
     }
     
     func removeFromCoreData(photos: [Photo]) {
         for photo in photos {
-            dataController.viewContext.delete(photo)
+            DataController.shared.viewContext.delete(photo)
         }
-        
     }
     
     func getIndexes() -> [Int] {
@@ -195,9 +194,6 @@ class PhotoAlbumViewController: UIViewController, NSFetchedResultsControllerDele
     }
     
     func loadNewCollection() {
-        if radius != 32 {
-            radius += 3
-        }
         var page: Int {
            if let totalPages = totalPages {
                let page = min(totalPages, 4000/21)
@@ -206,8 +202,7 @@ class PhotoAlbumViewController: UIViewController, NSFetchedResultsControllerDele
            return 1
        }
         loaded = false
-        FlickrAPI.getPhotosJSON(completion: completion(success:error:response:), lat: selectedPin.latitude, long: selectedPin.longitude, radius: radius, page: page)
-        collectionView.reloadData()
+        FlickrAPI.getPhotosJSON(completion: completion(success:error:response:), lat: selectedPin.latitude, long: selectedPin.longitude, page: page)
     }
     
     func loadSavedPhotos() -> [Photo]? {
@@ -227,11 +222,10 @@ class PhotoAlbumViewController: UIViewController, NSFetchedResultsControllerDele
     }
     
     func fetchedResultsController() -> NSFetchedResultsController<NSFetchRequestResult> {
-        
         let fetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: "Photo")
         fetchRequest.sortDescriptors = []
         fetchRequest.predicate = NSPredicate(format: "pin = %@", argumentArray: [selectedPin!])
-        let fetchResultController = NSFetchedResultsController(fetchRequest: fetchRequest, managedObjectContext: dataController.viewContext, sectionNameKeyPath: nil, cacheName: nil)
+        let fetchResultController = NSFetchedResultsController(fetchRequest: fetchRequest, managedObjectContext: DataController.shared.viewContext, sectionNameKeyPath: nil, cacheName: nil)
         fetchResultController.delegate = self
         return fetchResultController
     }
@@ -244,11 +238,16 @@ class PhotoAlbumViewController: UIViewController, NSFetchedResultsControllerDele
                 let items = selectedCells.map { $0.item }.sorted().reversed()
 
                 for item in items {
-                    dataController.viewContext.delete(photos[item])
+                    DataController.shared.viewContext.delete(photos[item])
                     photos.remove(at: item)
                 }
                 collectionView.deleteItems(at: selectedCells)
-                try? dataController.viewContext.save()
+                
+                do {
+                    try DataController.shared.viewContext.save()
+                } catch {
+                    Utils.showAlert(title: "Error", message: "Something went wrong", view: self)
+                }
 
             }
             mMode = .view
@@ -266,7 +265,7 @@ extension PhotoAlbumViewController: UICollectionViewDataSource, UICollectionView
         if loaded {
             return photos.count
         } else {
-            return 21
+            return Constants.PHOTOSPERPAGE
         }
     }
 

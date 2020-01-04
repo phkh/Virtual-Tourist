@@ -25,16 +25,4 @@ class CollectionViewCell: UICollectionViewCell {
             highlightingView.isHidden = !isSelected
         }
     }
-    
-    func initWithPhoto(_ photo: Photo) {
-        if photo.image == nil {
-            
-        } else {
-            
-        }
-    }
-    
-    func downloadPhoto(_ photo: Photo) {
-        
-    }
 }

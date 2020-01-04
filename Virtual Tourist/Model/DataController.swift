@@ -12,6 +12,7 @@ import CoreData
 class DataController {
     let persistentContainer:NSPersistentContainer
     
+    
     var viewContext:NSManagedObjectContext {
         return persistentContainer.viewContext
     }
@@ -28,4 +29,6 @@ class DataController {
             completion?()
         }
     }
+    
+    static let shared = DataController(modelName: "VirtualTourist")
 }

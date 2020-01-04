@@ -17,9 +17,7 @@ class TravelLocationMapView: UIViewController, MKMapViewDelegate {
     @IBOutlet weak var editButton: UIBarButtonItem!
     
     var firstTimeButtonClick = true
-    
-    var dataController:DataController!
-    
+        
     var pins: [Pin] = []
     var selectedAnnotation: MKPointAnnotation!
     var fetchedResults: NSFetchedResultsController<Pin>!
@@ -36,9 +34,6 @@ class TravelLocationMapView: UIViewController, MKMapViewDelegate {
         navigationBar.title = "Virtual Tourist"
         deleteButton.isHidden = true
         setupMap()
-        
-        var appDelegate = UIApplication.shared.delegate as! AppDelegate
-        dataController = appDelegate.dataController
         
         setupFetchedResults()
         
@@ -65,34 +60,40 @@ class TravelLocationMapView: UIViewController, MKMapViewDelegate {
     
     @objc func addAnnotation(_ recognizer: UIGestureRecognizer){
         if recognizer.state == UIGestureRecognizer.State.began {
-            let annotations = self.mapView.annotations
             let touchedAt = recognizer.location(in: self.mapView)
             let newCoordinates : CLLocationCoordinate2D = mapView.convert(touchedAt, toCoordinateFrom: self.mapView)
             
-            let pin = Pin(context: dataController.viewContext)
+            let pin = Pin(context: DataController.shared.viewContext)
             pin.latitude = newCoordinates.latitude
             pin.longitude = newCoordinates.longitude
             pin.coordinateString = "&lat=\(pin.latitude)&lon=\(pin.longitude)"
+            
 
             let annotation = MKPointAnnotation()
             annotation.coordinate = newCoordinates
             self.mapView.addAnnotation(annotation)
             
+            do {
+                try DataController.shared.viewContext.save()
+            } catch {
+                Utils.showAlert(title: "Error", message: "Something went wrong", view: self)
+                
+            }
             
-            try? dataController.viewContext.save()
             pins.append(pin)
         }
     }
     
     func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
         let identifier = "pinAnnotation"
-        if let annotationView = mapView.dequeueReusableAnnotationView(withIdentifier: identifier) {
+        if let annotationView = mapView.dequeueReusableAnnotationView(withIdentifier: identifier) as? MKPinAnnotationView {
             annotationView.annotation = annotation
             return annotationView
         } else {
             let annotationView = MKPinAnnotationView(annotation:annotation, reuseIdentifier: identifier)
             annotationView.isEnabled = true
             annotationView.canShowCallout = true
+            annotationView.animatesDrop = true
 
             return annotationView
         }
@@ -116,9 +117,13 @@ class TravelLocationMapView: UIViewController, MKMapViewDelegate {
                             
                             let annotationToRemove = view.annotation
                             self.mapView.removeAnnotation(annotationToRemove!)
-                            dataController.viewContext.delete(pin)
-                            try? dataController.viewContext.save()
+                            DataController.shared.viewContext.delete(pin)
                             
+                            do {
+                                try DataController.shared.viewContext.save()
+                            } catch {
+                                Utils.showAlert(title: "Error", message: "Something went wrong", view: self)
+                            }
                             break
                         }
                     }
@@ -145,7 +150,6 @@ class TravelLocationMapView: UIViewController, MKMapViewDelegate {
                     }
                 }
                 viewController.selectedPin = touchedPin
-                viewController.dataController = dataController
             }
         }
     }
@@ -172,7 +176,7 @@ extension TravelLocationMapView: NSFetchedResultsControllerDelegate {
         let sortDescriptor = NSSortDescriptor(key: "coordinateString", ascending: false)
         fetchRequest.sortDescriptors = [sortDescriptor]
         
-        fetchedResults = NSFetchedResultsController(fetchRequest: fetchRequest, managedObjectContext: dataController.viewContext, sectionNameKeyPath: nil, cacheName: nil)
+        fetchedResults = NSFetchedResultsController(fetchRequest: fetchRequest, managedObjectContext: DataController.shared.viewContext, sectionNameKeyPath: nil, cacheName: nil)
         fetchedResults.delegate = self
         do {
             try fetchedResults.performFetch()
